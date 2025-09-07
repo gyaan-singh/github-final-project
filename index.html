@@ -1,0 +1,237 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Bharat AI Store Prototype</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0; background: #f0f2f5;
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  header {
+    background: #007aff; color: white; padding: 1rem; text-align: center;
+    font-weight: bold; font-size: 1.2rem;
+  }
+  main {
+    flex: 1; display: flex; flex-wrap: wrap; padding: 1rem; gap: 1rem;
+  }
+  section {
+    background: white; border-radius: 8px; box-shadow: 0 2px 5px rgb(0 0 0 / 0.1);
+    padding: 1rem; flex-grow: 1;
+  }
+  #chatbox {
+    width: 100%; max-width: 350px; height: 500px; display: flex; flex-direction: column;
+    border: 1px solid #ccc; border-radius: 10px; overflow: hidden;
+  }
+  #messages {
+    flex: 1; padding: 10px; overflow-y: auto; background: #e5ddd5;
+  }
+  .msg {
+    margin-bottom: 10px; max-width: 80%;
+    padding: 8px 12px; border-radius: 15px; clear: both;
+    word-wrap: break-word;
+  }
+  .user-msg {
+    background: #dcf8c6; float: right; text-align: right;
+  }
+  .bot-msg {
+    background: white; float: left; text-align: left;
+  }
+  #input-area {
+    display: flex; border-top: 1px solid #ccc;
+  }
+  #input-area input {
+    flex: 1; border: none; padding: 10px; font-size: 1rem; border-radius: 0 0 0 10px;
+  }
+  #input-area button {
+    background: #007aff; color: white; border: none; padding: 0 16px;
+    cursor: pointer; border-radius: 0 0 10px 0;
+  }
+  h2 {
+    margin-top: 0;
+  }
+  table {
+    width: 100%; border-collapse: collapse; margin-top: 0.5rem;
+  }
+  th, td {
+    padding: 8px 6px; border-bottom: 1px solid #ddd; text-align: left;
+  }
+  th {
+    background: #007aff; color: white;
+  }
+  .alert {
+    color: red; font-weight: bold;
+  }
+  /* Responsive */
+  @media (max-width: 768px) {
+    main {
+      flex-direction: column;
+    }
+    section {
+      width: 100% !important;
+    }
+    #chatbox {
+      height: 350px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>Mini Bharat AI Store - Prototype</header>
+
+<main>
+  <!-- Chat Interface -->
+  <section id="chatbox">
+    <div id="messages"></div>
+    <div id="input-area">
+      <input type="text" id="userInput" placeholder="Type your message here..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </section>
+
+  <!-- Dashboard -->
+  <section style="max-width: 700px;">
+    <h2>Dashboard</h2>
+    
+    <!-- Inventory Table -->
+    <h3>Inventory & Expiry Alerts</h3>
+    <table id="inventoryTable">
+      <thead>
+        <tr><th>Product</th><th>Stock</th><th>Expiry Date</th><th>Status</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    
+    <!-- Price Comparison -->
+    <h3>Price Comparison (Local vs Online)</h3>
+    <table id="priceTable">
+      <thead>
+        <tr><th>Product</th><th>Local Price (₹)</th><th>Online Price (₹)</th><th>Cheaper</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    
+    <!-- Demand Forecast -->
+    <h3>Demand Forecast (Next 7 Days)</h3>
+    <canvas id="forecastChart" width="700" height="250"></canvas>
+    
+    <!-- Delivery Route (Mock) -->
+    <h3>Delivery Route Optimization (Mock)</h3>
+    <ol id="deliveryRoute"></ol>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Mock data
+  const inventory = [
+    { product: "Maggi", stock: 120, expiry: "2025-10-01", localPrice: 12, onlinePrice: 13 },
+    { product: "Dove", stock: 80, expiry: "2025-09-20", localPrice: 20, onlinePrice: 22 },
+    { product: "Colgate", stock: 100, expiry: "2025-11-15", localPrice: 30, onlinePrice: 29 }
+  ];
+
+  const demandForecast = {
+    Maggi: [15, 14, 16, 18, 20, 19, 21],
+    Dove: [10, 11, 10, 12, 13, 15, 14],
+    Colgate: [12, 13, 13, 14, 16, 15, 17]
+  };
+
+  const deliveryOrders = ["Store A", "Store B", "Store C", "Store D", "Store E"];
+
+  // Populate Inventory Table
+  function updateInventoryTable() {
+    const tbody = document.querySelector("#inventoryTable tbody");
+    tbody.innerHTML = '';
+    inventory.forEach(item => {
+      const today = new Date();
+      const expiryDate = new Date(item.expiry);
+      const daysLeft = Math.ceil((expiryDate - today) / (1000*60*60*24));
+      let status = "OK";
+      if (daysLeft < 30) status = `<span class="alert">Expiring in ${daysLeft} days!</span>`;
+      tbody.innerHTML += `
+        <tr>
+          <td>${item.product}</td>
+          <td>${item.stock}</td>
+          <td>${item.expiry}</td>
+          <td>${status}</td>
+        </tr>
+      `;
+    });
+  }
+  updateInventoryTable();
+
+  // Populate Price Table
+  const priceBody = document.querySelector("#priceTable tbody");
+  inventory.forEach(item => {
+    const cheaper = item.localPrice < item.onlinePrice ? "Local" : "Online";
+    priceBody.innerHTML += `
+      <tr>
+        <td>${item.product}</td>
+        <td>${item.localPrice}</td>
+        <td>${item.onlinePrice}</td>
+        <td>${cheaper}</td>
+      </tr>
+    `;
+  });
+
+  // Demand Forecast Chart
+  const ctx = document.getElementById('forecastChart').getContext('2d');
+  const forecastChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['Day1', 'Day2', 'Day3', 'Day4', 'Day5', 'Day6', 'Day7'],
+      datasets: [
+        {
+          label: 'Maggi',
+          data: demandForecast.Maggi,
+          borderColor: 'rgb(255, 99, 132)',
+          fill: false
+        },
+        {
+          label: 'Dove',
+          data: demandForecast.Dove,
+          borderColor: 'rgb(54, 162, 235)',
+          fill: false
+        },
+        {
+          label: 'Colgate',
+          data: demandForecast.Colgate,
+          borderColor: 'rgb(75, 192, 192)',
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+
+  // Delivery Route Optimization (Mock)
+  const deliveryRoute = document.getElementById('deliveryRoute');
+  function shuffle(array) {
+    let currentIndex = array.length, randomIndex;
+    while(currentIndex !== 0){
+      randomIndex = Math.floor(Math.random()*currentIndex);
+      currentIndex--;
+      [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+    }
+    return array;
+  }
+  const route = shuffle([...deliveryOrders]);
+  route.forEach(stop => {
+    const li = document.createElement('li');
+    li.textContent = stop;
+    deliveryRoute.appendChild(li);
+  });
+
+  // Chatbot simulation
+  const messages = document.getElementById('messages');
+  const input = document.getElementById('userInput');
+
+  function appendMessage(text, isUser) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'msg ' + (isUser ? 'user-msg' : 'bot-msg
+    
